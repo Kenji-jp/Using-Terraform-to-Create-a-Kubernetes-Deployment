@@ -1,73 +1,90 @@
 resource "kubernetes_service" "mysql_service" {
-  metadata = {
+  metadata {
     name = "wordpress-mysql"
-    label = {
-        app = "${var.app_label}"
+    labels = {
+      app = "${var.app_label}"
     }
   }
-
   spec {
-    slector {
-        app = "${var.app_label}"
-        tier = "${var.mysql_tier}"
+    selector = {
+      app  = "${var.app_label}"
+      tier = "${var.mysql_tier}"
     }
     port {
-        port = "3306"
+      port = "3306"
     }
+
     type = "NodePort"
   }
 }
 
-
 resource "kubernetes_deployment" "mysql_deployment" {
-  metadata = {
+  metadata {
     name = "wordpress-mysql"
-    label = {
-        app = "${var.app_label}"
+    labels = {
+      app = "${var.app_label}"
     }
   }
 
   spec {
     replicas = "1"
 
-    slector {
-    match_labels {
-        app ="${var.app_label}"
+    selector {
+      match_labels = {
+        app  = "${var.app_label}"
         tier = "${var.mysql_tier}"
-        }
+      }
     }
 
     template {
-        metadata {
-            labels {
-                app = "${var.app_label}"
-                tier = "${var.mysql_tier}"
-            }
+      metadata {
+        labels = {
+          app  = "${var.app_label}"
+          tier = "${var.mysql_tier}"
         }
-        template {
-            metadata {
-                labels {
-                    app = "${var.app_label}"
-                    tier = "${var.mysql_tier}"
-                }
-            }
-            spec {
-                container {
-                    name = "mysql"
-                    image = "mysql:5.7"
+      }
 
-                    env {
-                        name = "MYSQK_ROOT_PASSWORD"
-                        value = "${var.mysql_password}"
-                    }
-                    port {
-                        container_port = "3306"
-                        name = "mysql"
-                    }
-                }
-            }
+      spec {
+        container {
+          name  = "mysql"
+          image = "mysql:5.7"
+
+          env {
+            name  = "MYSQL_ROOT_PASSWORD"
+            value = var.mysql_password
+          }
+
+          port {
+            container_port = "3306"
+            name           = "mysql"
+          }
         }
+      }
     }
+  }
+}
+
+resource "kubernetes_service" "wordpress_service" {
+  metadata {
+    name = "wordpress"
+    labels = {
+      app = "${var.app_label}"
+    }
+  }
+  spec {
+    selector = {
+      app  = "${var.app_label}"
+      tier = "${var.wordpress_tier}"
+    }
+
+    port {
+      port        = "80"
+      target_port = "80"
+      node_port   = "8080"
+    }
+
+    type = "NodePort"
+  }
 }
 
 resource "kubernetes_deployment" "wordpress_deployment" {
@@ -79,7 +96,7 @@ resource "kubernetes_deployment" "wordpress_deployment" {
     replicas = "1"
 
     selector {
-      match_labels {
+      match_labels = {
         app  = "${var.app_label}"
         tier = "${var.wordpress_tier}"
       }
@@ -87,7 +104,7 @@ resource "kubernetes_deployment" "wordpress_deployment" {
 
     template {
       metadata {
-        labels {
+        labels = {
           app  = "${var.app_label}"
           tier = "${var.wordpress_tier}"
         }
@@ -99,13 +116,13 @@ resource "kubernetes_deployment" "wordpress_deployment" {
           image = "wordpress:${var.wordpress_version}-apache"
 
           env {
-            name = "WORDPRESS_DB_HOST"
+            name  = "WORDPRESS_DB_HOST"
             value = "wordpress-mysql"
           }
 
           env {
             name  = "WORDPRESS_DB_PASSWORD"
-            value = "${var.mysql_password}"
+            value = var.mysql_password
           }
 
           port {
@@ -117,5 +134,3 @@ resource "kubernetes_deployment" "wordpress_deployment" {
     }
   }
 }
-
-
