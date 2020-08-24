@@ -15,7 +15,9 @@ resource "kubernetes_service" "mysql_service" {
         port = "3306"
     }
     type = "NodePort"
+  }
 }
+
 
 resource "kubernetes_deployment" "mysql_deployment" {
   metadata = {
@@ -66,6 +68,54 @@ resource "kubernetes_deployment" "mysql_deployment" {
             }
         }
     }
+}
+
+resource "kubernetes_deployment" "wordpress_deployment" {
+  metadata {
+    name = "wordpress"
+  }
+
+  spec {
+    replicas = "1"
+
+    selector {
+      match_labels {
+        app  = "${var.app_label}"
+        tier = "${var.wordpress_tier}"
+      }
+    }
+
+    template {
+      metadata {
+        labels {
+          app  = "${var.app_label}"
+          tier = "${var.wordpress_tier}"
+        }
+      }
+
+      spec {
+        container {
+          name  = "wordpress"
+          image = "wordpress:${var.wordpress_version}-apache"
+
+          env {
+            name = "WORDPRESS_DB_HOST"
+            value = "wordpress-mysql"
+          }
+
+          env {
+            name  = "WORDPRESS_DB_PASSWORD"
+            value = "${var.mysql_password}"
+          }
+
+          port {
+            container_port = "80"
+            name           = "wordpress"
+          }
+        }
+      }
+    }
+  }
 }
 
 
